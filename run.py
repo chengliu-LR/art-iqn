@@ -1,108 +1,144 @@
-import gym
+import os
+import sys
+import yaml
 import time
+import pickle
+import argparse
+
+import gym
 import torch
 import numpy as np
-from agent import DQNAgent
-from utils import eval_runs
 from collections import deque
-from torch.utils.tensorboard import SummaryWriter
+
+from agent import DQNAgent
+from utils import eval_runs, computeExperimentID
 
 def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
     """Deep Q-Learning
     Params
     ======
-        n_episodes (int): maximum number of training episodes
-        max_t (int): maximum number of timesteps per episode
-        eps_start (float): starting value of epsilon, for epsilon-greedy action selection
-        eps_end (float): minimum value of epsilon
-        eps_decay (float): multiplicative factor (per episode) for decreasing epsilon
+    eps_fixed (int): whether epsilon greedy exploration
+    min_eps (float)L minimum epsilon greedy exploration rate
+    n_episodes (int): maximum number of training episodes
     """
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     output_history = []
+
+    # logger
+    logger = {}
+    logger['scores'] = []
+    logger['scores_window'] = []
+
     frame = 0
     if eps_fixed:
         eps = 0
     else:
         eps = 1
+
     eps_start = 1
     i_episode = 1
+
     state = env.reset()
     score = 0                  
     for frame in range(1, frames+1):
 
         action = agent.act(state, eps)
         next_state, reward, done, _ = env.step(action)
-        agent.step(state, action, reward, next_state, done, writer)
+        agent.update(state, action, reward, next_state, done)
         state = next_state
         score += reward
+
         # linear annealing to the min epsilon value until eps_frames and from there slowly decease epsilon to 0 until the end of training
         if eps_fixed == False:
             if frame < eps_frames:
-                eps = max(eps_start - (frame*(1/eps_frames)), min_eps)
+                eps = max(eps_start - (frame * (1/eps_frames)), min_eps)
             else:
-                eps = max(min_eps - min_eps*((frame-eps_frames)/(frames-eps_frames)), 0.001)
+                eps = max(min_eps - min_eps * ((frame-eps_frames)/(frames-eps_frames)), 0.001)
 
         # evaluation runs
         if frame % 5000 == 0:
-            eval_runs(agent, eps, frame, writer)
+            eval_runs(agent, eps, frame)
         
         if done:
-            scores_window.append(score)       # save most recent score
-            scores.append(score)              # save most recent score
-            writer.add_scalar("Average100", np.mean(scores_window), frame)
+            scores_window.append(score)       
+            logger['scores'].append(score)
+            logger['scores_window'].append(np.mean(scores_window))
             output_history.append(np.mean(scores_window))
-            print('\rEpisode {}\tFrame {} \tAverage Score: {:.2f}'.format(i_episode, frame, np.mean(scores_window)), end="")
+            print('\rEpisode {}\tFrame {}\tAverage Score: {:.2f}'.format(i_episode, frame, np.mean(scores_window)), end="")
+
             if i_episode % 100 == 0:
                 print('\rEpisode {}\tFrame {}\tAverage Score: {:.2f}'.format(i_episode,frame, np.mean(scores_window)))
-            i_episode +=1 
+            i_episode += 1
             state = env.reset()
-            score = 0              
-
-    return output_history
+            score = 0
+    
+    pickle.dump(logger, open("{}/{}/logger.pkl".format(args.save_dir, currentExperimentID), 'wb'))
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--save_dir', default='experiments', help='Change the experiment saving directory here')
+    parser.add_argument('--env', default='CartPole-v0', help='Training environment')
+    parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
+    parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
+    parser.add_argument('--seed', default=5, help=" Random seed")
+    parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
+    parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
+    parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
+    parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
+    parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
+    parser.add_argument('--buffer_size', default=100000, type=int, help='Buffer size of the replay memory')
+    parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
+    args = parser.parse_args()
 
-    writer = SummaryWriter("runs/"+"IQN_CP_5")
-    seed            = 5
-    n_step          = 1
-    UPDATE_EVERY    = 1
-    BATCH_SIZE      = 8
-    GAMMA           = 0.99
-    TAU             = 1e-2
-    LR              = 1e-3
-    BUFFER_SIZE     = 100000
+    if not os.path.exists(args.save_dir):
+        os.mkdir(args.save_dir)
+    
+    currentExperimentID = computeExperimentID(args.save_dir)
+    print("Current experiment ID: {}".format(currentExperimentID))
+    os.mkdir("{}/{}/".format(args.save_dir, currentExperimentID))
+
+    with open("{}/{}/arguments".format(args.save_dir, currentExperimentID), 'w') as f:
+        yaml.dump(args.__dict__, f)
+
+    with open("{}/{}/{}".format(args.save_dir, currentExperimentID, "".join(sys.argv)), 'w') as f:
+        pass
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print("Using ", device)
+    print("Using", device)
 
-    np.random.seed(seed)
-    env = gym.make("CartPole-v0")
-
-    env.seed(seed)
-    action_size = env.action_space.n
+    np.random.seed(args.seed)
+    env = gym.make(args.env)
+    env.seed(args.seed)
     state_size = env.observation_space.shape
+    action_size = env.action_space.n
 
-    agent = DQNAgent(state_size=state_size,    
+    agent = DQNAgent(state_size=state_size,
                         action_size=action_size,
-                        layer_size=256,
-                        n_step=n_step,
-                        BATCH_SIZE=BATCH_SIZE, 
-                        BUFFER_SIZE=BUFFER_SIZE, 
-                        LR=LR, 
-                        TAU=TAU, 
-                        GAMMA=GAMMA, 
-                        UPDATE_EVERY=UPDATE_EVERY, 
+                        layer_size=args.layer_size,
+                        n_step=args.n_step,
+                        BATCH_SIZE=args.batch_size,
+                        BUFFER_SIZE=args.buffer_size,
+                        LR=args.lr, 
+                        TAU=args.tau,
+                        GAMMA=args.gamma,
+                        UPDATE_EVERY=args.update_every,
                         device=device,
-                        seed=seed)
-
+                        seed=args.seed,
+                        distortion=args.distortion,
+                        con_val_at_risk=args.cvar)
 
     # set epsilon frames to 0 so no epsilon exploration
     eps_fixed = False
 
-    t0 = time.time()
-    final_average100 = run(frames = 60000, eps_fixed=eps_fixed, eps_frames=5000, min_eps=0.025)
-    t1 = time.time()
+    # logger for multiple plots
+
+    t_start = time.time()
+    run(frames = args.frames, eps_fixed=eps_fixed, eps_frames=5000, min_eps=0.025)
+    t_end = time.time()
     
-    print("Training time: {}min".format(round((t1-t0)/60,2)))
-    torch.save(agent.qnetwork_local.state_dict(), "IQN.pth")
+    print("Training time: {}min".format(round((t_end-t_start) / 60, 2)))
+    torch.save(agent.qnetwork_local.state_dict(), "{}/{}/IQN.pth".format(args.save_dir, currentExperimentID))

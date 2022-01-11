@@ -5,7 +5,7 @@ import time
 import pickle
 import argparse
 
-from drone import DroneEnv
+from drone import DroneEnv, DroneEnv2D
 import torch
 import numpy as np
 from collections import deque
@@ -40,9 +40,9 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
     i_episode = 1
 
     state = env.reset()
-    score = 0                  
+    score = 0
+    
     for frame in range(1, frames+1):
-
         action = agent.act(state, eps)
         next_state, reward, done, _ = env.step(action)
         agent.update(state, action, reward, next_state, done)
@@ -78,7 +78,7 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--save_dir', default='experiments_drone', help='Change the experiment saving directory here')
+    parser.add_argument('--save_dir', default='experiments_drone2D', help='Change the experiment saving directory here')
     parser.add_argument('--env', default='CartPole-v0', help='Training environment')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     print("Using", device)
 
     np.random.seed(args.seed)
-    env = DroneEnv()
+    env = DroneEnv2D()
     state_size = env.state_size
     action_size = env.action_size
 
@@ -139,5 +139,5 @@ if __name__ == "__main__":
     run(frames = args.frames, eps_fixed=eps_fixed, eps_frames=5000, min_eps=0.025)
     t_end = time.time()
     
-    print("Training time: {}min".format(round((t_end-t_start) / 60, 2)))
+    print("\nTraining time: {}min".format(round((t_end-t_start) / 60, 2)))
     torch.save(agent.qnetwork_local.state_dict(), "{}/{}/IQN.pth".format(args.save_dir, currentExperimentID))

@@ -3,24 +3,11 @@ import torch.optim as optim
 import numpy as np
 import random
 from model import IQN
-from utils import calculate_huber_loss
-from replay_memory import ReplayBuffer
+from utils import calculate_huber_loss, ReplayBuffer
 
 class DQNAgent():
     """Interacts with and learns from the environment."""
-    def __init__(self,
-                 state_size,
-                 action_size,
-                 layer_size,
-                 n_step,
-                 BATCH_SIZE,
-                 BUFFER_SIZE,
-                 LR,
-                 TAU,
-                 GAMMA,
-                 UPDATE_EVERY,
-                 device,
-                 seed):
+    def __init__(self, state_size, action_size, layer_size, n_step, BATCH_SIZE, BUFFER_SIZE, LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk):
         """Initialize an Agent object.
         Params
         ======
@@ -35,6 +22,7 @@ class DQNAgent():
             UPDATE_EVERY (int): update frequency
             device (str): device that is used for the compute
             seed (int): random seed
+            distortion (str): decide which distortion function to use
         """
         self.state_size = state_size
         self.action_size = action_size
@@ -44,27 +32,26 @@ class DQNAgent():
         self.GAMMA = GAMMA
         self.UPDATE_EVERY = UPDATE_EVERY
         self.BATCH_SIZE = BATCH_SIZE
-        self.Q_updates = 0
         self.n_step = n_step
 
         self.action_step = 4
         self.last_action = None
 
         # IQN-Network
-        self.qnetwork_local = IQN(state_size, action_size, layer_size, n_step, seed).to(device)
-        self.qnetwork_target = IQN(state_size, action_size, layer_size, n_step, seed).to(device)
+        self.qnetwork_local = IQN(state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
+        self.qnetwork_target = IQN(state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         print(self.qnetwork_local)
         
         # Replay memory
-        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, self.device, seed, self.GAMMA, n_step)
+        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, device, seed, GAMMA, n_step)
         
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
     
 
-    def step(self, state, action, reward, next_state, done, writer):
+    def update(self, state, action, reward, next_state, done):
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state, done)
         
@@ -75,8 +62,7 @@ class DQNAgent():
             if len(self.memory) > self.BATCH_SIZE:
                 experiences = self.memory.sample()
                 loss = self.learn(experiences)
-                self.Q_updates += 1
-                writer.add_scalar("Q_loss", loss, self.Q_updates)
+                # TO-DO: log loss
 
 
     def act(self, state, eps=0.):
@@ -95,14 +81,14 @@ class DQNAgent():
                 action_values = self.qnetwork_local.get_action(state)
             self.qnetwork_local.train()
 
-            # Epsilon-greedy action selection
-            if random.random() > eps: # select greedy action if random number is higher than epsilon or noisy network is used!
+            # epsilon-greedy action selection
+            if random.random() > eps:
                 action = np.argmax(action_values.cpu().data.numpy())
                 self.last_action = action
                 return action
             else:
                 action = random.choice(np.arange(self.action_size))
-                self.last_action = action 
+                self.last_action = action
                 return action
         else:
             self.action_step += 1
@@ -123,7 +109,7 @@ class DQNAgent():
         Q_targets_next = Q_targets_next.detach().max(2)[0].unsqueeze(1) # (batch_size, 1, N)
         
         # Compute Q targets for current states 
-        Q_targets = rewards.unsqueeze(-1) + (self.GAMMA**self.n_step * Q_targets_next * (1. - dones.unsqueeze(-1)))
+        Q_targets = rewards.unsqueeze(-1) + (self.GAMMA ** self.n_step * Q_targets_next * (1. - dones.unsqueeze(-1)))
         # Get expected Q values from local model
         Q_expected, taus = self.qnetwork_local(states)
         Q_expected = Q_expected.gather(2, actions.unsqueeze(-1).expand(self.BATCH_SIZE, 8, 1))
@@ -134,27 +120,27 @@ class DQNAgent():
         huber_l = calculate_huber_loss(td_error, 1.0)
         quantil_l = abs(taus -(td_error.detach() < 0).float()) * huber_l / 1.0
         
-        loss = quantil_l.sum(dim=1).mean(dim=1) # , keepdim=True if per weights get multipl
+        loss = quantil_l.sum(dim=1).mean(dim=1) # keepdim=True if per weights get multiple
         loss = loss.mean()
 
-        # Minimize the loss
+        # minimize the loss
         loss.backward()
         #clip_grad_norm_(self.qnetwork_local.parameters(),1)
         self.optimizer.step()
 
-        # ------------------- update target network ------------------- #
+        # update target network
         self.soft_update(self.qnetwork_local, self.qnetwork_target)
-        return loss.detach().cpu().numpy()            
+        return loss.detach().cpu().numpy()
 
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
+        θ_target = τ * θ_local + (1 - τ) * θ_target
         Params
         ======
             local_model (PyTorch model): weights will be copied from
             target_model (PyTorch model): weights will be copied to
-            tau (float): interpolation parameter 
+            tau (float): interpolation parameter
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(self.TAU*local_param.data + (1.0-self.TAU)*target_param.data)
+            target_param.data.copy_(self.TAU * local_param.data + (1.0 - self.TAU) * target_param.data)
