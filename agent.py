@@ -4,10 +4,14 @@ import numpy as np
 import random
 from model import IQN
 from utils import calculate_huber_loss, ReplayBuffer
+import crazyflie_env
+from crazyflie_env.envs.utils.action import ActionXY
+from crazyflie_env.envs.utils.state import FullState
 
 class DQNAgent():
     """Interacts with and learns from the environment."""
-    def __init__(self, state_size, action_size, layer_size, n_step, BATCH_SIZE, BUFFER_SIZE, LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk):
+    def __init__(self, state_size, num_directions, num_speeds, layer_size, n_step, BATCH_SIZE, BUFFER_SIZE,
+                LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk):
         """Initialize an Agent object.
         Params
         ======
@@ -25,7 +29,10 @@ class DQNAgent():
             distortion (str): decide which distortion function to use
         """
         self.state_size = state_size
-        self.action_size = action_size
+        self.num_directions = num_directions # larger number provide more precise direction control
+        self.num_speeds = num_speeds # larger num_speed give more precise speed control
+        self.action_size = 1 + self.num_directions * self.num_speeds
+        self.action_space = None # don't mess it around with env.action_space in gym
         self.seed = random.seed(seed)
         self.device = device
         self.TAU = TAU
@@ -38,8 +45,8 @@ class DQNAgent():
         self.last_action = None
 
         # IQN-Network
-        self.qnetwork_local = IQN(state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
-        self.qnetwork_target = IQN(state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
+        self.qnetwork_local = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
+        self.qnetwork_target = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         print(self.qnetwork_local)
@@ -65,34 +72,49 @@ class DQNAgent():
                 # TO-DO: log loss
 
 
+    def build_action_space(self, max_velocity):
+        """Build discrete action space according to given number of possible directions and max velocity.
+        Return: List of ActionXY (or Action rotation)
+        """
+        rotations = np.linspace(0, 2 * np.pi, self.num_directions, endpoint=False)
+        speeds = [(np.exp((i + 1) / self.num_speeds) - 1) / (np.e - 1) * max_velocity for i in range(self.num_speeds)]
+        action_space = [ActionXY(0, 0)]
+        none_zero_actions = [(r, v) for r in rotations for v in speeds]
+        for r, v in none_zero_actions:
+            action_space.append(ActionXY(v * np.cos(r), v * np.sin(r)))
+        
+        return action_space
+
+
     def act(self, state, eps=0.):
-        """Returns actions for given state as per current policy. Acting only every 4 frames!
+        """Returns action indexes for given state as per current policy. Acting only every 4 frames!
         Params
         ======
             frame: to adjust epsilon
             state (array_like): current state
         """
+        assert self.action_space is not None
         if self.action_step == 4:
             state = np.array(state)
 
             state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
             self.qnetwork_local.eval()
             with torch.no_grad():
-                action_values = self.qnetwork_local.get_action(state)
+                action_values = self.qnetwork_local.get_qvals(state)
             self.qnetwork_local.train()
 
             # epsilon-greedy action selection
             if random.random() > eps:
                 action = np.argmax(action_values.cpu().data.numpy())
                 self.last_action = action
-                return action
+                return action, self.action_space[action]
             else:
                 action = random.choice(np.arange(self.action_size))
                 self.last_action = action
-                return action
+                return action, self.action_space[action]
         else:
             self.action_step += 1
-            return self.last_action
+            return self.last_action, self.action_space[self.last_action]
 
 
     def learn(self, experiences):
