@@ -17,7 +17,7 @@ class IQN(nn.Module):
         self.con_val_at_risk = con_val_at_risk
         self.layer_size = layer_size
         self.pis = torch.FloatTensor([np.pi * i for i in range(self.n_cos)]).view(1, 1, self.n_cos).to(self.device)
-        self.head = nn.Linear(self.input_shape[0], layer_size)
+        self.head = nn.Linear(self.input_shape, layer_size)
         self.cos_embedding = nn.Linear(self.n_cos, layer_size)
         self.hidden_layer = nn.Linear(layer_size, layer_size)
         self.output_layer = nn.Linear(layer_size, action_size)
@@ -67,7 +67,7 @@ class IQN(nn.Module):
         return out.view(batch_size, num_tau, self.action_size), taus
 
 
-    def get_action(self, inputs):
+    def get_qvals(self, inputs):
         quantiles, _ = self.forward(inputs=inputs, num_tau=self.K, distortion=self.distortion)
-        actions = quantiles.mean(dim=1)
-        return actions
+        qvals = quantiles.mean(dim=1)
+        return qvals
