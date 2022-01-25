@@ -5,6 +5,8 @@ import random
 import numpy as np
 from collections import deque, namedtuple
 
+from crazyflie_env.envs.utils.state import FullState
+
 def weight_init(layers):
     for layer in layers:
         torch.nn.init.kaiming_normal_(layer.weight, nonlinearity='relu')
@@ -37,6 +39,22 @@ def eval_runs(agent, eps, frame):
                 break
         reward_batch.append(rewards)
     #writer.add_scalar("Reward", np.mean(reward_batch), frame)
+
+
+def to_gym_interface(state):
+    assert isinstance(state, FullState)
+    new_state = np.array((state.px, state.py, state.vx, state.vy, state.radius, state.gx, state.gy), dtype=np.float32)
+    return new_state
+
+
+def computeExperimentID(save_dir):
+    list_of_ids = [int(id) for id in os.listdir(save_dir)]
+    return max(list_of_ids) + 1 if len(list_of_ids) else 0
+
+
+def plotValues(model, state):
+    quantiles, taus = model(state)
+    print(quantiles, '\n', taus)
 
 
 class ReplayBuffer():
@@ -86,19 +104,10 @@ class ReplayBuffer():
         rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(self.device)
         next_states = torch.from_numpy(np.stack([e.next_state for e in experiences if e is not None])).float().to(self.device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(self.device)
+
         return (states, actions, rewards, next_states, dones)
 
 
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
-
-
-def computeExperimentID(save_dir):
-    list_of_ids = [int(id) for id in os.listdir(save_dir)]
-    return max(list_of_ids) + 1 if len(list_of_ids) else 0
-
-
-def plotValues(model, state):
-    quantiles, taus = model(state)
-    print(quantiles, '\n', taus)
