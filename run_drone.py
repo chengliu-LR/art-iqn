@@ -78,7 +78,7 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--save_dir', default='experiments_drone2D', help='Change the experiment saving directory here')
+    parser.add_argument('--save_dir', default='experiments_drone', help='Change the experiment saving directory here')
     parser.add_argument('--env', default='CartPole-v0', help='Training environment')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     print("Using", device)
 
     np.random.seed(args.seed)
-    env = DroneEnv2D()
+    env = DroneEnv()
     state_size = env.state_size
     action_size = env.action_size
 
