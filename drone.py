@@ -41,7 +41,7 @@ class DroneEnv():
 
         speed_limit_exceeded = bool(self.velocity > 1.0)
         if speed_limit_exceeded:
-            reward += -25.0 * np.random.binomial(1, 0.4, 1)[0]
+            reward += -25.0 * np.random.binomial(1, 0.8, 1)[0]
 
         done = bool(self.position >= self.goal_position)
         if done:

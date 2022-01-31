@@ -56,7 +56,7 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
         action_id, action = agent.act(to_gym_interface(state), eps)
         next_state, reward, done, info = env.step(action)
         #print(done, info)
-        agent.update(to_gym_interface(state), action_id, reward, to_gym_interface(next_state), done)
+        agent.update(to_gym_interface(state), action_id, reward, to_gym_interface(next_state), done) # save experience and update network
         state = next_state
         score += reward
 
