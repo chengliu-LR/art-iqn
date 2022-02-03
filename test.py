@@ -21,7 +21,7 @@ from crazyflie_env.envs.utils.state import FullState
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--load_dir', default='27', help='Change the experiment saving directory here')
+    parser.add_argument('--load_dir', default=None, help='Change the model loading directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
     parser.add_argument('--num_directions', default=8, type=int, help='Discrete directions')
     parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
