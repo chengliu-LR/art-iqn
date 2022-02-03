@@ -78,7 +78,7 @@ if __name__ == "__main__":
         #agent.update(state, action, reward, next_state, done)
         state = next_state
         score += reward
-        print("x {}, y {}, reward {}, info {}".format(round(state.position[0], 2), round(state.position[1], 2), round(reward, 2), info))
+        print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 2), round(state.position[1], 2), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
     print("Episodic return:", score)
 
     env.render(mode='video', output_file="./figures/iqn_policy_2.gif")
