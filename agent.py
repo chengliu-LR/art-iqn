@@ -3,7 +3,7 @@ import torch.optim as optim
 import numpy as np
 import random
 from model import IQN
-from utils import calculate_huber_loss, ReplayBuffer
+from utils.util import calculate_huber_loss, ReplayBuffer
 import crazyflie_env
 from crazyflie_env.envs.utils.action import ActionXY
 from crazyflie_env.envs.utils.state import FullState

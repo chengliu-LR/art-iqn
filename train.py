@@ -12,7 +12,7 @@ import numpy as np
 from collections import deque
 
 from agent import DQNAgent
-from utils import eval_runs, computeExperimentID, to_gym_interface
+from utils.util import eval_runs, computeExperimentID, to_gym_interface
 
 import crazyflie_env
 from crazyflie_env.envs.utils.action import ActionXY

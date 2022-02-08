@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from utils import weight_init
+from utils.util import weight_init
 class IQN(nn.Module):
     '''implicit quantile network model'''
     def __init__(self, state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk, layer_type="ff"):
