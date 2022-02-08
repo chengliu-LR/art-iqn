@@ -4,7 +4,6 @@ import torch
 import random
 import numpy as np
 from collections import deque, namedtuple
-
 from crazyflie_env.envs.utils.state import FullState
 
 def weight_init(layers):

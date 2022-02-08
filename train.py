@@ -78,7 +78,7 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
             logger['success_rate'].append(success / i_episode)
             logger['timeout_rate'].append(timeout / i_episode)
             logger['collision_rate'].append(collision / i_episode)
-            print('\rEpoch {:5d}\tFrame {:5d}\tAv Score {:.5f}\tS {:.2f}\tC {:.2f}\tT {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
+            print('\rEpoch {:5d}\tFrame {:5d}\tAveScore {:.5f}\tS {:.2f}\tC {:.2f}\tT {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
 
             # if i_episode % 100 == 0:
             #     print('\rEpisode {}\tFrame {}\tAverage Score {:.2f}\tS Rate {:.2f}\tC Rate {:.2f}\tT Rate {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
