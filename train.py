@@ -78,7 +78,7 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
             logger['success_rate'].append(success / i_episode)
             logger['timeout_rate'].append(timeout / i_episode)
             logger['collision_rate'].append(collision / i_episode)
-            print('\rEpisode {}\tFrame {}\tAverage Score {:.2f}\tS Rate {:.2f}\tC Rate {:.2f}\tT Rate {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
+            print('\rEpoch {:5d}\tFrame {:5d}\tAv Score {:.5f}\tS {:.2f}\tC {:.2f}\tT {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
 
             # if i_episode % 100 == 0:
             #     print('\rEpisode {}\tFrame {}\tAverage Score {:.2f}\tS Rate {:.2f}\tC Rate {:.2f}\tT Rate {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', default='experimentsCrazy', help='Change the experiment saving directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
-    parser.add_argument('--random_init_pos', default=0, help='Whether initialize robot at random position')
+    parser.add_argument('--random_init', default=1, help='Whether initialize robot at random position')
     parser.add_argument('--num_directions', default=8, type=int, help='Discrete directions')
     parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
-    parser.add_argument('--buffer_size', default=100000, type=int, help='Buffer size of the replay memory')
+    parser.add_argument('--buffer_size', default=50000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
     args = parser.parse_args()
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     np.random.seed(args.seed)
     env = gym.make(args.env)
-    env.random_init_pos = bool(args.random_init_pos)
+    env.random_init = bool(args.random_init)
     #env.seed(args.seed)
     state = env.reset()
     state_size = len(state)

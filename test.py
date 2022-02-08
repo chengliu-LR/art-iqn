@@ -41,9 +41,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
-    eps=0.1
+    eps=0.0 # no exploration during test
     state = env.reset()
-    print(state) #observable state: px, py, vx, vy, radius
+    print('initial state:', state) #observable state: px, py, vx, vy, radius
     state_size = len(state)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -81,4 +81,4 @@ if __name__ == "__main__":
         print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 2), round(state.position[1], 2), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
     print("Episodic return:", score)
 
-    env.render(mode='video', output_file="./figures/iqn_policy_2.gif")
+    env.render(mode='video', output_file="./figures/iqn_random_init.gif")

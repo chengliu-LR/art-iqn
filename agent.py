@@ -31,7 +31,7 @@ class DQNAgent():
         self.state_size = state_size
         self.num_directions = num_directions # larger number provide more precise direction control
         self.num_speeds = num_speeds # larger num_speed give more precise speed control
-        self.action_size = 1 + self.num_directions * self.num_speeds
+        self.action_size = self.num_directions * self.num_speeds
         self.action_space = None # don't mess it around with env.action_space in gym
         self.seed = random.seed(seed)
         self.device = device
@@ -49,7 +49,7 @@ class DQNAgent():
         self.qnetwork_target = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
-        print(self.qnetwork_local)
+        #print(self.qnetwork_local)
         
         # Replay memory
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, device, seed, GAMMA, n_step)
@@ -78,7 +78,8 @@ class DQNAgent():
         """
         rotations = np.linspace(0, 2 * np.pi, self.num_directions, endpoint=False)
         speeds = [(np.exp((i + 1) / self.num_speeds) - 1) / (np.e - 1) * max_velocity for i in range(self.num_speeds)]
-        action_space = [ActionXY(0, 0)]
+        #action_space = [ActionXY(0, 0)]
+        action_space = []
         none_zero_actions = [(r, v) for r in rotations for v in speeds]
         for r, v in none_zero_actions:
             action_space.append(ActionXY(v * np.cos(r), v * np.sin(r)))
