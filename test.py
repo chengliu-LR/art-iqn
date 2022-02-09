@@ -21,7 +21,7 @@ from crazyflie_env.envs.utils.state import FullState
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--load_dir', default=None, help='Change the model loading directory here')
+    parser.add_argument('--dir', default=None, help='Change the model loading directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
     parser.add_argument('--num_directions', default=8, type=int, help='Discrete directions')
     parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
@@ -37,15 +37,14 @@ if __name__ == "__main__":
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=100000, type=int, help='Buffer size of the replay memory')
-    parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
-    eps=0.0 # no exploration during test
     state = env.reset()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
     state_size = len(state)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    eps=0.0 # no exploration during test
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,
@@ -64,11 +63,9 @@ if __name__ == "__main__":
                         con_val_at_risk=args.cvar)
     
     # load trained model
-    load_dir = './experimentsCrazy/{}/IQN.pth'.format(args.load_dir)
-    agent.qnetwork_local.load_state_dict(torch.load(load_dir))
-
-    max_velocity = args.max_velocity
-    agent.action_space = agent.build_action_space(max_velocity)
+    dir = './experimentsCrazy/{}/IQN.pth'.format(args.dir)
+    agent.qnetwork_local.load_state_dict(torch.load(dir))
+    agent.action_space = agent.build_action_space(args.max_velocity)
 
     done = False
     score = 0
@@ -78,7 +75,7 @@ if __name__ == "__main__":
         #agent.update(state, action, reward, next_state, done)
         state = next_state
         score += reward
-        print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 2), round(state.position[1], 2), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
+        print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
     print("Episodic return:", score)
 
     env.render(mode='video', output_file="./figures/iqn_random_init.gif")
