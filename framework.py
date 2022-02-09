@@ -5,13 +5,13 @@ For this script to run the following hardware is needed:
 * Flow deck
 * Optitrack system
 """
-# pytorch lib
+# pytorch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions.uniform import Uniform
 
-# utils lib
+# utils
 import os
 import sys
 import time
@@ -20,8 +20,9 @@ import logging
 import argparse
 import numpy as np
 from matplotlib import pyplot as plt
+from utils.util import computeExperimentID, to_gym_interface
 
-# crazyflie lib
+# crazyflie
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
@@ -29,9 +30,8 @@ from cflib.positioning.motion_commander import MotionCommander
 from cflib.utils import uri_helper
 from cflib.utils.multiranger import Multiranger
 
-# optitrack lib
+# optitrack
 from utils.optitrack import NatNetClient
-from utils.util import computeExperimentID, to_gym_interface
 
 # URI for the crazyflie to be connected
 URI = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7EC')
