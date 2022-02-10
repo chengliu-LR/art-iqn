@@ -153,7 +153,7 @@ if __name__ == '__main__':
                 state = FullState(px, py, vx, vy, radius, gx, gy)
                 action_id, action = agent.act(to_gym_interface(state), eps)
                 motion_commander.start_linear_motion(action.vx, action.vy, 0.0)
-                print("px: {:.4f} py: {:.4f} vx: {} vy: {}\n".format(px, py, action.vx, action.vy))
+                print("px: {:.4f} py: {:.4f} vx: {} vy: {}".format(px, py, action.vx, action.vy))
                 time.sleep(0.05)
                 goal_distance = np.linalg.norm(np.array((pos_opti[0], pos_opti[1])) - goal_position)
                 if goal_distance < radius:
