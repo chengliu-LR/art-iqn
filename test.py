@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
     parser.add_argument('--seed', default=5, help=" Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
     parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')

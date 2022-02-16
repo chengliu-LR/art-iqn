@@ -69,7 +69,8 @@ class DQNAgent():
             if len(self.memory) > self.BATCH_SIZE:
                 experiences = self.memory.sample()
                 loss = self.learn(experiences)
-                # TO-DO: log loss
+                
+                return loss
 
 
     def build_action_space(self, max_velocity):

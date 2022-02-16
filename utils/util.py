@@ -42,7 +42,8 @@ def eval_runs(agent, eps, frame):
 
 def to_gym_interface(state):
     assert isinstance(state, FullState)
-    new_state = np.array((state.px, state.py, state.vx, state.vy, state.radius, state.gx, state.gy), dtype=np.float32)
+    #new_state = np.array((state.px, state.py, state.vx, state.vy, state.radius, state.gx, state.gy), dtype=np.float32)
+    new_state = np.array((state.px, state.py), dtype=np.float32)
     return new_state
 
 
