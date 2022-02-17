@@ -41,8 +41,12 @@ if __name__ == "__main__":
 
     env = gym.make("CrazyflieEnv-v0")
     state = env.reset()
+    # if you want to set robot initial position by hand:
+    # env.robot.set_state(-1.5, 2.5, 0, 2, 0, 0, env.obstacle_segments)
+    # state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
-    state_size = len(state)
+
+    state_size = len(to_gym_interface(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     eps=0.0 # no exploration during test
 
