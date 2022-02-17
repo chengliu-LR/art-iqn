@@ -12,7 +12,7 @@ import numpy as np
 from collections import deque
 
 from agent import DQNAgent
-from utils.util import to_gym_interface
+from utils.util import to_gym_interface_ranger
 import matplotlib.pyplot as plt
 
 import crazyflie_env
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
-    state_size = len(to_gym_interface(state))
+    state_size = len(to_gym_interface_ranger(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     eps=0.0 # no exploration during test
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     done = False
     score = 0
     while not done:
-        action_id, action = agent.act(to_gym_interface(state), eps)
+        action_id, action = agent.act(to_gym_interface_ranger(state), eps)
         next_state, reward, done, info = env.step(action)
         #agent.update(state, action, reward, next_state, done)
         state = next_state

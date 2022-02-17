@@ -47,6 +47,12 @@ def to_gym_interface(state):
     return new_state
 
 
+def to_gym_interface_ranger(state):
+    assert isinstance(state, FullState)
+    state = np.hstack((state.px, state.py, state.ranger_reflections))
+    return state
+
+
 def computeExperimentID(save_dir):
     list_of_ids = [int(id) for id in os.listdir(save_dir)]
     return max(list_of_ids) + 1 if len(list_of_ids) else 0
