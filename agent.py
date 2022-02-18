@@ -6,7 +6,6 @@ from model import IQN
 from utils.util import calculate_huber_loss, ReplayBuffer
 import crazyflie_env
 from crazyflie_env.envs.utils.action import ActionXY
-from crazyflie_env.envs.utils.state import FullState
 
 class DQNAgent():
     """Interacts with and learns from the environment."""
@@ -84,6 +83,7 @@ class DQNAgent():
         none_zero_actions = [(r, v) for r in rotations for v in speeds]
         for r, v in none_zero_actions:
             action_space.append(ActionXY(v * np.cos(r), v * np.sin(r)))
+        print(action_space)
         
         return action_space
 

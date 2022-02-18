@@ -4,7 +4,7 @@ import torch
 import random
 import numpy as np
 from collections import deque, namedtuple
-from crazyflie_env.envs.utils.state import FullState
+from crazyflie_env.envs.utils.state import FullState, ObservableState
 
 def weight_init(layers):
     for layer in layers:
@@ -50,6 +50,12 @@ def to_gym_interface(state):
 def to_gym_interface_ranger(state):
     assert isinstance(state, FullState)
     state = np.hstack((state.px, state.py, state.ranger_reflections))
+    return state
+
+
+def to_gym_interface_pomdp(state):
+    assert isinstance(state, ObservableState)
+    state = np.hstack((state.goal_distance, state.ranger_reflections))
     return state
 
 

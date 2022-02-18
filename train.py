@@ -12,11 +12,9 @@ import numpy as np
 from collections import deque
 
 from agent import DQNAgent
-from utils.util import eval_runs, computeExperimentID, to_gym_interface_ranger
+from utils.util import eval_runs, computeExperimentID, to_gym_interface_pomdp
 
 import crazyflie_env
-from crazyflie_env.envs.utils.action import ActionXY
-from crazyflie_env.envs.utils.state import FullState
 
 def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
     """Deep Q-Learning
@@ -54,10 +52,10 @@ def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
     state = env.reset()
 
     for frame in range(1, frames+1):
-        action_id, action = agent.act(to_gym_interface_ranger(state), eps)
+        action_id, action = agent.act(to_gym_interface_pomdp(state), eps)
         next_state, reward, done, info = env.step(action)
         #print(done, info)
-        loss = agent.update(to_gym_interface_ranger(state), action_id, reward, to_gym_interface_ranger(next_state), done) # save experience and update network
+        loss = agent.update(to_gym_interface_pomdp(state), action_id, reward, to_gym_interface_pomdp(next_state), done) # save experience and update network
         logger['losses'].append(loss)
         state = next_state
         score += reward
@@ -143,7 +141,7 @@ if __name__ == "__main__":
     env.random_init = bool(args.random_init)
     #env.seed(args.seed)
     state = env.reset()
-    state_size = len(to_gym_interface_ranger(state))
+    state_size = len(to_gym_interface_pomdp(state))
     print("State size:", state_size)
 
     agent = DQNAgent(state_size=state_size,
