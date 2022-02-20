@@ -46,8 +46,8 @@ if __name__ == "__main__":
     env = gym.make("CrazyflieEnv-v0")
     state = env.reset()
     # if you want to set robot initial position by hand:
-    #env.robot.set_state(args.init_x, args.init_y, 0, 3, 0, 0, env.obstacle_segments)
-    #state = env.robot.observe()
+    env.robot.set_state(args.init_x, args.init_y, 0, 2.8, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
+    state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
     state_size = len(to_gym_interface_pomdp(state))
