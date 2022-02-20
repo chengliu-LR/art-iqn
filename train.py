@@ -16,7 +16,7 @@ from utils.util import eval_runs, computeExperimentID, to_gym_interface_pomdp
 
 import crazyflie_env
 
-def run(frames=1000, eps_fixed=False, eps_frames=1e6, min_eps=0.01):
+def run(frames, eps_fixed, eps_frames, min_eps):
     """Deep Q-Learning
     Params
     ======
@@ -111,11 +111,11 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=5, help=" Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
-    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
+    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network') # increase model width
     parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
-    parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
+    parser.add_argument('--lr', default=2e-4, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=50000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
     args = parser.parse_args()
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         pass
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print("Using", device)
+    #print("Using", device)
 
     np.random.seed(args.seed)
     env = gym.make(args.env)
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     # logger for multiple plots
 
     t_start = time.time()
-    run(frames = args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 5, min_eps=0.02)
+    run(frames=args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 5, min_eps=0.2)
     t_end = time.time()
     
     print("Training time: {}min".format(round((t_end-t_start) / 60, 2)))

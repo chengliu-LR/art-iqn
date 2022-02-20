@@ -88,7 +88,7 @@ class DQNAgent():
         return action_space
 
 
-    def act(self, state, eps=0.):
+    def act(self, state, eps):
         """Returns action indexes for given state as per current policy. Acting only every 4 frames!
         Params
         ======
@@ -149,7 +149,7 @@ class DQNAgent():
 
         # minimize the loss
         loss.backward()
-        #clip_grad_norm_(self.qnetwork_local.parameters(),1)
+        torch.nn.utils.clip_grad_norm_(self.qnetwork_local.parameters(), 0.5)
         self.optimizer.step()
 
         # update target network

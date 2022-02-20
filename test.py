@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
-    parser.add_argument('--seed', default=5, help=" Random seed")
+    parser.add_argument('--seed', default=5, help="Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
@@ -37,18 +37,22 @@ if __name__ == "__main__":
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=100000, type=int, help='Buffer size of the replay memory')
+    parser.add_argument('--init_x', default=0, type=float, help='Initial robot position x')
+    parser.add_argument('--init_y', default=-3, type=float, help='Initial robot position y')
+    parser.add_argument('--render_mode', default='trajectory', help='Render mode')
+    parser.add_argument('--render_density', default=8, type=int, help='Render density')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
     state = env.reset()
     # if you want to set robot initial position by hand:
-    env.robot.set_state(0, -2, 0, 2, 0, 0, env.obstacle_segments)
-    state = env.robot.observe()
+    #env.robot.set_state(args.init_x, args.init_y, 0, 3, 0, 0, env.obstacle_segments)
+    #state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
     state_size = len(to_gym_interface_pomdp(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    eps=0.0 # no exploration during test
+    eps=0.2 # no exploration during test
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,
@@ -80,7 +84,7 @@ if __name__ == "__main__":
         state = next_state
         score += reward
         #print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
-        print("goal dsit {}, reward {}, info {} vx {}, vy {}".format(round(state.goal_distance), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
+        print("goal dist {}, reward {}, info {} vx {}, vy {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
     print("Episodic return:", score)
 
-    env.render(mode='video', output_file="./figures/iqn_random_init.gif")
+    env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)

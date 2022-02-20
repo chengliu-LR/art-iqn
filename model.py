@@ -20,6 +20,7 @@ class IQN(nn.Module):
         self.head = nn.Linear(self.input_shape, layer_size)
         self.cos_embedding = nn.Linear(self.n_cos, layer_size)
         self.hidden_layer = nn.Linear(layer_size, layer_size)
+        self.hidden_layer_2 = nn.Linear(layer_size, layer_size)
         self.output_layer = nn.Linear(layer_size, action_size)
         #weight_init([self.head_1, self.ff_1])
         print("Distortion measure: {}\tCVaR: {}".format(self.distortion, self.con_val_at_risk))
@@ -63,6 +64,7 @@ class IQN(nn.Module):
         x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, self.layer_size)
         
         x = torch.relu(self.hidden_layer(x))
+        x = torch.relu(self.hidden_layer_2(x))
         out = self.output_layer(x)
         return out.view(batch_size, num_tau, self.action_size), taus
 
