@@ -12,7 +12,7 @@ import numpy as np
 from collections import deque
 
 from agent import DQNAgent
-from utils.util import eval_runs, computeExperimentID, to_gym_interface_pomdp
+from utils.util import eval_runs, computeExperimentID, to_gym_interface_pos
 import crazyflie_env
 
 def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
@@ -51,10 +51,10 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
     state = env.reset()
 
     for frame in range(1, frames+1):
-        action_id, action = agent.act(to_gym_interface_pomdp(state), eps)
+        action_id, action = agent.act(to_gym_interface_pos(state), eps)
         next_state, reward, done, info = env.step(action)
         #print(done, info)
-        loss = agent.update(to_gym_interface_pomdp(state), action_id, reward, to_gym_interface_pomdp(next_state), done) # save experience and update network
+        loss = agent.update(to_gym_interface_pos(state), action_id, reward, to_gym_interface_pos(next_state), done) # save experience and update network
         logger['losses'].append(loss)
         state = next_state
         score += reward
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     
     #env.seed(args.seed)
     state = env.reset()
-    state_size = len(to_gym_interface_pomdp(state))
+    state_size = len(to_gym_interface_pos(state))
     print("State size {} Num obstacle {}".format(state_size, env.obstacle_num))
 
     agent = DQNAgent(state_size=state_size,

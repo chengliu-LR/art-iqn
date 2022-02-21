@@ -12,7 +12,7 @@ import numpy as np
 from collections import deque
 
 from agent import DQNAgent
-from utils.util import to_gym_interface_pomdp
+from utils.util import to_gym_interface_pos
 import matplotlib.pyplot as plt
 
 import crazyflie_env
@@ -48,13 +48,13 @@ if __name__ == "__main__":
     env.set_obstacle_num(args.obstacle_num)
     state = env.reset()
     # if you want to set robot initial position by hand:
-    env.robot.set_state(args.init_x, args.init_y, 0, 3.0, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
+    env.robot.set_state(args.init_x, args.init_y, 0, 2.5, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
     state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
-    state_size = len(to_gym_interface_pomdp(state))
+    state_size = len(to_gym_interface_pos(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    eps=0.2 # no exploration during test
+    eps=0.0 # no exploration during test
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,
@@ -80,13 +80,13 @@ if __name__ == "__main__":
     done = False
     score = 0
     while not done:
-        action_id, action = agent.act(to_gym_interface_pomdp(state), eps)
+        action_id, action = agent.act(to_gym_interface_pos(state), eps)
         next_state, reward, done, info = env.step(action)
         #agent.update(state, action, reward, next_state, done)
         state = next_state
         score += reward
         #print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
-        print("goal dist {}, reward {}, info {} vx {}, vy {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
+        print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2), state.ranger_reflections[1]))
     print("Episodic return:", score)
 
     env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)

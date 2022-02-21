@@ -59,6 +59,10 @@ def to_gym_interface_pomdp(state):
     return state
 
 
+def to_gym_interface_pos(state):
+    state = np.hstack((state.position, state.ranger_reflections))
+    return state
+
 def computeExperimentID(save_dir):
     list_of_ids = [int(id) for id in os.listdir(save_dir)]
     return max(list_of_ids) + 1 if len(list_of_ids) else 0
