@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=5, help="Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
-    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
+    parser.add_argument('--layer_size', default=512, type=int, help='Hidden layer size of neural network')
     parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
@@ -41,12 +41,14 @@ if __name__ == "__main__":
     parser.add_argument('--init_y', default=-3, type=float, help='Initial robot position y')
     parser.add_argument('--render_mode', default='trajectory', help='Render mode')
     parser.add_argument('--render_density', default=8, type=int, help='Render density')
+    parser.add_argument('--obstacle_num', default=3, type=int, help='Number of obstacles set in the env')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
+    env.set_obstacle_num(args.obstacle_num)
     state = env.reset()
     # if you want to set robot initial position by hand:
-    env.robot.set_state(args.init_x, args.init_y, 0, 2.8, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
+    env.robot.set_state(args.init_x, args.init_y, 0, 3.0, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
     state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 

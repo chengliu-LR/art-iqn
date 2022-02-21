@@ -13,10 +13,9 @@ from collections import deque
 
 from agent import DQNAgent
 from utils.util import eval_runs, computeExperimentID, to_gym_interface_pomdp
-
 import crazyflie_env
 
-def run(frames, eps_fixed, eps_frames, min_eps):
+def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
     """Deep Q-Learning
     Params
     ======
@@ -90,7 +89,8 @@ def run(frames, eps_fixed, eps_frames, min_eps):
                 collision += 1
             elif info == "Goal Reached":
                 success += 1
-            #assert timeout + success + collision + 1 == i_episode
+            if i_episode == n_episodes:
+                break
             
             state = env.reset()
             score = 0
@@ -111,13 +111,15 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=5, help=" Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
-    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network') # increase model width
+    parser.add_argument('--layer_size', default=512, type=int, help='Hidden layer size of neural network') # increase model width
     parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=2e-4, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=50000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
+    parser.add_argument('--obstacle_num', default=0, type=int, help='Number of obstacles set in the env')
+    parser.add_argument('--n_episodes', default=2000, type=int, help='Number of episodes of training')
     args = parser.parse_args()
 
     if not os.path.exists(args.save_dir):
@@ -139,10 +141,12 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     env = gym.make(args.env)
     env.random_init = bool(args.random_init)
+    env.set_obstacle_num(args.obstacle_num)
+    
     #env.seed(args.seed)
     state = env.reset()
     state_size = len(to_gym_interface_pomdp(state))
-    print("State size:", state_size)
+    print("State size {} Num obstacle {}".format(state_size, env.obstacle_num))
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,
@@ -169,7 +173,7 @@ if __name__ == "__main__":
     # logger for multiple plots
 
     t_start = time.time()
-    run(frames=args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 5, min_eps=0.2)
+    run(n_episodes=args.n_episodes, frames=args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 5, min_eps=0.2)
     t_end = time.time()
     
     print("Training time: {}min".format(round((t_end-t_start) / 60, 2)))
