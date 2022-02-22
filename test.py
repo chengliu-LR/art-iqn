@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument('--render_mode', default='trajectory', help='Render mode')
     parser.add_argument('--render_density', default=8, type=int, help='Render density')
     parser.add_argument('--obstacle_num', default=3, type=int, help='Number of obstacles set in the env')
+    parser.add_argument('--test_eps', default=0.0, type=float, help='Learning rate')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
@@ -54,7 +55,7 @@ if __name__ == "__main__":
 
     state_size = len(to_gym_interface_pos(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    eps=0.0 # no exploration during test
+    eps=args.test_eps # exploration rate during test
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,

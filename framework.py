@@ -4,6 +4,7 @@ For this script to run the following hardware is needed:
 * Crazyradio PA
 * Flow deck
 * Optitrack system
+! Always check the user ID before running this script!
 """
 # pytorch
 import torch
@@ -22,7 +23,7 @@ import logging
 import argparse
 import numpy as np
 from matplotlib import pyplot as plt
-from utils.util import to_gym_interface
+from utils.util import to_gym_interface_pos
 
 # crazyflie
 import cflib.crtp
@@ -37,8 +38,7 @@ from utils.optitrack import NatNetClient
 
 # iqn agent
 import crazyflie_env
-from crazyflie_env.envs.utils.action import ActionXY
-from crazyflie_env.envs.utils.state import FullState
+from crazyflie_env.envs.utils.state import ObservableState
 
 # URI for the crazyflie to be connected
 URI = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7EC')
@@ -68,7 +68,7 @@ def receiveRigidBodyFrame(id, position, rotation):
     Called once per rigid body per frame.
     """
     #global pos_ot, logger
-    if id == 3:
+    if id == 1:
         # optitrack z x y
         # crazyflie x y z
         pos_opti[0] = position[2]
@@ -80,29 +80,31 @@ def receiveRigidBodyFrame(id, position, rotation):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', default=None, help='Change the model loading directory here')
+    parser.add_argument('--dir', default=176, help='Change the model loading directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
-    parser.add_argument('--num_directions', default=8, type=int, help='Discrete directions')
-    parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
+    parser.add_argument('--num_directions', default=4, type=int, help='Discrete directions')
+    parser.add_argument('--num_speeds', default=3, type=int, help='Discrete velocities')
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
     parser.add_argument('--seed', default=5, help=" Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
-    parser.add_argument('--layer_size', default=256, type=int, help='Hidden layer size of neural network')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    parser.add_argument('--layer_size', default=512, type=int, help='Hidden layer size of neural network')
     parser.add_argument('--n_step', default=1, type=int, help='Number of future steps for Q value evaluation')
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=1e-3, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=100000, type=int, help='Buffer size of the replay memory')
+    parser.add_argument('--test_eps', default=0.0, type=float, help='Learning rate')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
+    env.set_obstacle_num(0)
     state = env.reset()
-    state_size = len(state)
+    state_size = len(to_gym_interface_pos(state))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    eps=0.0 # no exploration during test
+    eps=args.test_eps # exploration rate during test
 
     agent = DQNAgent(state_size=state_size,
                         num_directions=args.num_directions,
@@ -141,24 +143,28 @@ if __name__ == '__main__':
     cf = Crazyflie(rw_cache='./cache')
     with SyncCrazyflie(URI, cf=cf) as scf:
         with MotionCommander(scf) as motion_commander:
-            goal_reached = False
-            vx, vy = 0.0, 0.0
-            radius = 0.1
-            gx, gy = 0.0, 2.0
-            goal_position = np.array((gx, gy))
+            with Multiranger(scf) as multiranger:
+                goal_reached = False
+                radius = 0.05
+                gx, gy = 0.0, 2.0
+                orientation = 0.0
+                goal_position = np.array((gx, gy))
 
-            while not goal_reached:
-                px = pos_opti[0]
-                py = pos_opti[1]
-                state = FullState(px, py, vx, vy, radius, gx, gy)
-                action_id, action = agent.act(to_gym_interface(state), eps)
-                motion_commander.start_linear_motion(action.vx, action.vy, 0.0)
-                print("px: {:.4f} py: {:.4f} vx: {} vy: {}".format(px, py, action.vx, action.vy))
-                time.sleep(0.05)
-                goal_distance = np.linalg.norm(np.array((pos_opti[0], pos_opti[1])) - goal_position)
-                if goal_distance < radius:
-                    goal_reached = True
+                while not goal_reached:
+                    robot_position = np.array((pos_opti[0], pos_opti[1]))
+                    goal_distance = np.linalg.norm(robot_position - goal_position)
+                    #ranger_raw = [multiranger.front, multiranger.back, multiranger.left, multiranger.right]
+                    ranger_raw = [multiranger.front, multiranger.left, multiranger.back, multiranger.right]
+                    ranger_reflections = np.array([ranger_raw[i] if ranger_raw[i] is not None else 3.0 for i in range(4)])
+                    clipped_reflections = np.clip(ranger_reflections, 0.0, 3.0)
+                    state = ObservableState(robot_position, goal_distance, orientation, clipped_reflections)
+                    print(robot_position, clipped_reflections)
+                    action_id, action = agent.act(to_gym_interface_pos(state), eps)
+                    motion_commander.start_linear_motion(action.vx, action.vy, 0.0)
+                    time.sleep(0.1)
+                    if goal_distance < 20 * radius:
+                        goal_reached = True
 
                 # calling motion_commander._thread.set_vel_setpoint()
-        pickle.dump(logger, open("experimentsCrazy/{}/trajectory.pkl".format(args.dir), 'wb'))
+        pickle.dump(logger, open("experimentsCrazy/{}/trajectory_closer_flag.pkl".format(args.dir), 'wb'))
         print("Navigation completed!")
