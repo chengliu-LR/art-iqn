@@ -23,17 +23,20 @@ class IQN(nn.Module):
         self.hidden_layer_2 = nn.Linear(layer_size, layer_size)
         self.output_layer = nn.Linear(layer_size, action_size)
         #weight_init([self.head_1, self.ff_1])
-        print("Distortion measure: {}\tCVaR: {}".format(self.distortion, self.con_val_at_risk))
+        print("Distortion measure: {}\tRandom CVaR: {}".format(self.distortion, 'True' if self.con_val_at_risk else 'False'))
 
 
-    def calc_cos(self, batch_size, n_tau=8, distortion='neutral'):
+    def calc_cos(self, batch_size, n_tau=8, distortion='neutral', cvar=1.0):
         """
         Calculating the cosinus values depending on the number of tau samples
         """
         taus = torch.rand(batch_size, n_tau).to(self.device).unsqueeze(-1) # (batch_size, n_tau, 1) for broadcast
+        #print(taus)
+
         # distorted quantile sampling
         if distortion == 'CVaR':
-            taus = taus * self.con_val_at_risk
+            taus = taus * cvar
+            #print(taus)
         elif distortion == 'neutral':
             pass
         else:
@@ -44,7 +47,7 @@ class IQN(nn.Module):
         return cos, taus
     
 
-    def forward(self, inputs, num_tau=8, distortion='neutral'):
+    def forward(self, inputs, num_tau=8, distortion='neutral', cvar=1.0):
         """
         Quantile calculation depending on the number of tau
         
@@ -56,7 +59,7 @@ class IQN(nn.Module):
         batch_size = inputs.shape[0]
         
         x = torch.relu(self.head(inputs))
-        cos, taus = self.calc_cos(batch_size, num_tau, distortion) # cos shape (batch, num_tau, layer_size)
+        cos, taus = self.calc_cos(batch_size, num_tau, distortion, cvar) # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
         cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, self.layer_size)
         
@@ -69,7 +72,7 @@ class IQN(nn.Module):
         return out.view(batch_size, num_tau, self.action_size), taus
 
 
-    def get_qvals(self, inputs):
-        quantiles, _ = self.forward(inputs=inputs, num_tau=self.K, distortion=self.distortion)
+    def get_qvals(self, inputs, cvar):
+        quantiles, _ = self.forward(inputs=inputs, num_tau=self.K, distortion=self.distortion, cvar=cvar)
         qvals = quantiles.mean(dim=1)
         return qvals

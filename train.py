@@ -47,11 +47,14 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
     collision = 0
     timeout = 0
     score = 0                  
+    success_rates = deque(maxlen=25)
 
-    state = env.reset()
+    state, obs_num = env.reset()
+    # sample CVaR as risk-averse level (0, 1) interval excluding both ends
+    cvar = 1 - np.random.uniform(0.0, 1.0)
 
     for frame in range(1, frames+1):
-        action_id, action = agent.act(to_gym_interface_pos(state), eps)
+        action_id, action = agent.act(to_gym_interface_pos(state), eps, cvar)
         next_state, reward, done, info = env.step(action)
         #print(done, info)
         loss = agent.update(to_gym_interface_pos(state), action_id, reward, to_gym_interface_pos(next_state), done) # save experience and update network
@@ -71,13 +74,13 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
             #eval_runs(agent, eps, frame)
         
         if done:
-            scores_window.append(score)       
+            scores_window.append(score)
             logger['scores'].append(score)
             logger['scores_window'].append(np.mean(scores_window))
             logger['success_rate'].append(success / i_episode)
             logger['timeout_rate'].append(timeout / i_episode)
             logger['collision_rate'].append(collision / i_episode)
-            print('\rEpoch {:5d}\tFrame {:5d}\tAveScore {:.5f}\tS {:.2f}\tC {:.2f}\tT {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
+            print('\rEpo {:5d}\tFrame {:5d}\tAvScore {:.3f}\tS {:.2f}\tC {:.2f}\tT {:.2f}\tEps {:.3f}\tInfo {}\t CVaR {:.3f}\tStage {}\tObsacles {:2d}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info, cvar, env.training_stage, obs_num), end="")
 
             # if i_episode % 100 == 0:
             #     print('\rEpisode {}\tFrame {}\tAverage Score {:.2f}\tS Rate {:.2f}\tC Rate {:.2f}\tT Rate {:.2f}\teps {:.3f}\tinfo {}'.format(i_episode, frame, np.mean(scores_window), success / i_episode, collision / i_episode, timeout / i_episode, eps, info), end="")
@@ -87,12 +90,16 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
                 timeout += 1
             elif info == "Collision":
                 collision += 1
-            elif info == "Goal Reached":
+            elif info == "Reached":
                 success += 1
             if i_episode == n_episodes:
                 break
             
-            state = env.reset()
+            success_rates.append(success / i_episode)
+            if np.average(success_rates) >= 0.8:
+                env.set_training_stage('second')
+            state, obs_num = env.reset()
+            cvar = 1 - np.random.uniform(0.0, 1.0)
             score = 0
     
     pickle.dump(logger, open("{}/{}/logger.pkl".format(args.save_dir, currentExperimentID), 'wb'))
@@ -103,11 +110,11 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir', default='experimentsCrazy', help='Change the experiment saving directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
     parser.add_argument('--random_init', default=1, help='Whether initialize robot at random position')
-    parser.add_argument('--num_directions', default=8, type=int, help='Discrete directions')
-    parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
+    parser.add_argument('--num_directions', default=4, type=int, help='Discrete directions')
+    parser.add_argument('--num_speeds', default=3, type=int, help='Discrete velocities')
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
-    parser.add_argument('--cvar', default=0.2, type=float, help="Give the quantile value of the CVaR tail")
+    parser.add_argument('--sample_cvar', default=1, type=float, help="Enable cvar value sampling from the uniform distribution")
     parser.add_argument('--seed', default=5, help=" Random seed")
     parser.add_argument('--update_every', default=1, type=int, help='Update policy network every update_every steps')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
@@ -145,7 +152,7 @@ if __name__ == "__main__":
     env.set_obstacle_num(args.obstacle_num)
     
     #env.seed(args.seed)
-    state = env.reset()
+    state, obs_num = env.reset() # reset so we can get the dim of states
     state_size = len(to_gym_interface_pos(state))
     print("State size {} Num obstacle {}".format(state_size, env.obstacle_num))
 
@@ -163,7 +170,7 @@ if __name__ == "__main__":
                         device=device,
                         seed=args.seed,
                         distortion=args.distortion,
-                        con_val_at_risk=args.cvar)
+                        con_val_at_risk=bool(args.sample_cvar))
     
     max_velocity = args.max_velocity
     agent.action_space = agent.build_action_space(max_velocity)
@@ -174,7 +181,7 @@ if __name__ == "__main__":
     # logger for multiple plots
 
     t_start = time.time()
-    run(n_episodes=args.n_episodes, frames=args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 5, min_eps=0.2)
+    run(n_episodes=args.n_episodes, frames=args.frames, eps_fixed=eps_fixed, eps_frames=args.frames / 4, min_eps=0.2)
     t_end = time.time()
     
     print("Training time: {}min".format(round((t_end-t_start) / 60, 2)))

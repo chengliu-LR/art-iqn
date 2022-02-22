@@ -60,7 +60,7 @@ def to_gym_interface_pomdp(state):
 
 
 def to_gym_interface_pos(state):
-    state = np.hstack((state.position, state.ranger_reflections))
+    state = np.hstack((state.position, state.goal_distance, state.ranger_reflections))
     return state
 
 def computeExperimentID(save_dir):

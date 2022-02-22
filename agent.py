@@ -88,7 +88,7 @@ class DQNAgent():
         return action_space
 
 
-    def act(self, state, eps):
+    def act(self, state, eps, cvar):
         """Returns action indexes for given state as per current policy. Acting only every 4 frames!
         Params
         ======
@@ -102,7 +102,7 @@ class DQNAgent():
             state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
             self.qnetwork_local.eval()
             with torch.no_grad():
-                action_values = self.qnetwork_local.get_qvals(state)
+                action_values = self.qnetwork_local.get_qvals(state, cvar)
             self.qnetwork_local.train()
 
             # epsilon-greedy action selection
