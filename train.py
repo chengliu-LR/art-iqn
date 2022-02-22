@@ -118,8 +118,9 @@ if __name__ == "__main__":
     parser.add_argument('--lr', default=2e-4, type=float, help='Learning rate')
     parser.add_argument('--buffer_size', default=50000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
-    parser.add_argument('--obstacle_num', default=0, type=int, help='Number of obstacles set in the env')
     parser.add_argument('--n_episodes', default=2000, type=int, help='Number of episodes of training')
+    parser.add_argument('--obstacle_num', default=3, type=int, help='Number of obstacles set in the env')
+    parser.add_argument('--random_obstacle', default=1, type=int, help='Enable random obstacle generation or fixed obstacle position')
     args = parser.parse_args()
 
     if not os.path.exists(args.save_dir):
@@ -140,7 +141,7 @@ if __name__ == "__main__":
 
     np.random.seed(args.seed)
     env = gym.make(args.env)
-    env.random_init = bool(args.random_init)
+    env.enable_random_obstacle(args.random_obstacle)
     env.set_obstacle_num(args.obstacle_num)
     
     #env.seed(args.seed)
