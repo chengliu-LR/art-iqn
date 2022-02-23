@@ -93,8 +93,8 @@ if __name__ == "__main__":
     logger_eval.write("Density, CVaR, Success, Timeout, Collision, Time, Danger, Episodic Scores\n")
     logger_eval.flush()
 
-    for cvar in cvar_values:
-        for density in densities:
+    for density in densities:
+        for cvar in cvar_values:
             env.set_obstacle_num(density)
             episodic_scores = []
             episodic_finish_time = []
