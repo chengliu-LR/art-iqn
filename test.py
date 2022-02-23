@@ -53,7 +53,7 @@ if __name__ == "__main__":
     state, _ = env.reset()
 
     # if you want to set robot initial position by hand:
-    env.robot.set_state(args.init_x, args.init_y, 0, 2.5, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
+    env.robot.set_state(args.init_x, args.init_y, 0, 0, 0, 2.5, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
     state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
