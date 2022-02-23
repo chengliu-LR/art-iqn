@@ -34,6 +34,8 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
     logger['timeout_rate'] = []
     logger['collision_rate'] = []
     logger['losses'] = []
+    logger['stage_point'] = []
+    logger['new_success_rate'] = []
 
     frame = 0
     if eps_fixed:
@@ -47,7 +49,11 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
     collision = 0
     timeout = 0
     score = 0                  
-    success_rates = deque(maxlen=25)
+
+    success_rates = deque(maxlen=50)
+    for _ in range(50):
+        success_rates.append(0)
+    new_success_rate = np.sum(success_rates) / len(success_rates)
 
     state, obs_num = env.reset()
     # sample CVaR as risk-averse level (0, 1) interval excluding both ends
@@ -95,9 +101,13 @@ def run(n_episodes, frames, eps_fixed, eps_frames, min_eps):
             if i_episode == n_episodes:
                 break
             
-            success_rates.append(success / i_episode)
-            if np.average(success_rates) >= 0.8:
+            success_rates.append(1 if info == "Reached" else 0)
+            new_success_rate = np.sum(success_rates) / len(success_rates)
+            logger['new_success_rate'].append(new_success_rate)
+            if success / i_episode >= 0.8:
                 env.set_training_stage('second')
+                if len(logger['stage_point']) < 1:
+                    logger['stage_point'].append(i_episode)
             state, obs_num = env.reset()
             cvar = 1 - np.random.uniform(0.0, 1.0)
             score = 0
@@ -123,10 +133,10 @@ if __name__ == "__main__":
     parser.add_argument('--gamma', default=0.99, type=float, help='Gamma discount factor')
     parser.add_argument('--tau', default=1e-2, type=float, help='Tau for soft updating the network weights')
     parser.add_argument('--lr', default=2e-4, type=float, help='Learning rate')
-    parser.add_argument('--buffer_size', default=50000, type=int, help='Buffer size of the replay memory')
+    parser.add_argument('--buffer_size', default=60000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
     parser.add_argument('--n_episodes', default=2000, type=int, help='Number of episodes of training')
-    parser.add_argument('--obstacle_num', default=3, type=int, help='Number of obstacles set in the env')
+    parser.add_argument('--obstacle_num', default=5, type=int, help='Number of obstacles set in the env')
     parser.add_argument('--random_obstacle', default=1, type=int, help='Enable random obstacle generation or fixed obstacle position')
     args = parser.parse_args()
 

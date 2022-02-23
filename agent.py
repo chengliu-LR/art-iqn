@@ -10,7 +10,7 @@ from crazyflie_env.envs.utils.action import ActionXY
 class DQNAgent():
     """Interacts with and learns from the environment."""
     def __init__(self, state_size, num_directions, num_speeds, layer_size, n_step, BATCH_SIZE, BUFFER_SIZE,
-                LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk):
+                LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk, eval=False):
         """Initialize an Agent object.
         Params
         ======
@@ -32,7 +32,9 @@ class DQNAgent():
         self.num_speeds = num_speeds # larger num_speed give more precise speed control
         self.action_size = self.num_directions * self.num_speeds
         self.action_space = None # don't mess it around with env.action_space in gym
-        self.seed = random.seed(seed)
+        self.eval = eval
+        if not self.eval:
+            self.seed = random.seed(seed)
         self.device = device
         self.TAU = TAU
         self.GAMMA = GAMMA
@@ -51,11 +53,11 @@ class DQNAgent():
         #print(self.qnetwork_local)
         
         # Replay memory
-        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, device, seed, GAMMA, n_step)
+        if not self.eval:
+            self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, device, seed, GAMMA, n_step)
         
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
-    
 
     def update(self, state, action, reward, next_state, done):
         # Save experience in replay memory
@@ -83,7 +85,7 @@ class DQNAgent():
         none_zero_actions = [(r, v) for r in rotations for v in speeds]
         for r, v in none_zero_actions:
             action_space.append(ActionXY(v * np.cos(r), v * np.sin(r)))
-        print(action_space)
+        print("Num of discrete actions: {}".format(len(action_space)))
         
         return action_space
 

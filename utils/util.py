@@ -68,6 +68,25 @@ def computeExperimentID(save_dir):
     return max(list_of_ids) + 1 if len(list_of_ids) else 0
 
 
+def concatenate_states(state, hist_steps):
+    """
+    Concatenate states after reset.
+    """
+    hist_state = deque(maxlen=hist_steps)
+    while len(hist_state) < hist_steps:
+        hist_state.append(state)
+
+    return hist_state
+
+
+def to_gym_interface_cat(hist_state):
+    position = np.array([state.position for state in hist_state]).T.flatten()
+    goal_distance = np.array([state.goal_distance for state in hist_state])
+    ranger_reflections = np.array([state.ranger_reflections for state in hist_state]).T.flatten()
+
+    return np.hstack([position, goal_distance, ranger_reflections])
+
+
 def plotValues(model, state):
     quantiles, taus = model(state)
     print(quantiles, '\n', taus)

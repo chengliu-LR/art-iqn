@@ -92,7 +92,7 @@ if __name__ == "__main__":
         score += reward
         #print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
         print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2), state.ranger_reflections[1]))
-    print("Episodic return:", score)
+    print("Episodic return:", score, "Task time", env.global_time)
 
     print([[round(obs.centroid[0], 2), round(obs.centroid[1], 2), round(obs.wx, 2), round(obs.wy, 2)] for obs in env.obstacles])
     env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)
