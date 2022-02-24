@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument('--dir', default=None, help='Change the model loading directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
     parser.add_argument('--num_directions', default=4, type=int, help='Discrete directions')
-    parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
+    parser.add_argument('--num_speeds', default=3, type=int, help='Discrete velocities')
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--sample_cvar', default=1, type=float, help="Enable cvar value sampling from the uniform distribution")
@@ -45,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument('--obstacle_num', default=3, type=int, help='Number of obstacles set in the env, only functions when random_obstacle is True')
     parser.add_argument('--test_eps', default=0.0, type=float, help='Learning rate')
     parser.add_argument('--random_obstacle', default=1, type=int, help='Enable random obstacle generation or fixed obstacle position')
+    parser.add_argument('--variance_samples_n', default=8, type=int, help='Truncated Variance calculation hyperparameter')
     args = parser.parse_args()
 
     env = gym.make("CrazyflieEnv-v0")
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     state, _ = env.reset()
 
     # if you want to set robot initial position by hand:
-    env.robot.set_state(args.init_x, args.init_y, 0, 0, 0, 2.5, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
+    env.robot.set_state(args.init_x, args.init_y, 0, 0, 0.0, 3.0, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
     state = env.robot.observe()
     print('initial state:', state) #observable state: px, py, vx, vy, radius
 
@@ -75,7 +76,8 @@ if __name__ == "__main__":
                         device=device,
                         seed=args.seed,
                         distortion=args.distortion,
-                        con_val_at_risk=bool(args.sample_cvar))
+                        con_val_at_risk=bool(args.sample_cvar),
+                        variance_samples_n=args.variance_samples_n)
     
     # load trained model
     dir = './experimentsCrazy/{}/IQN.pth'.format(args.dir)
@@ -91,8 +93,9 @@ if __name__ == "__main__":
         state = next_state
         score += reward
         #print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
-        print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2), state.ranger_reflections[1]))
+        print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(state.velocity[0], 2), round(state.velocity[1], 2), state.ranger_reflections[1]))
     print("Episodic return:", score, "Task time", env.global_time)
 
     print([[round(obs.centroid[0], 2), round(obs.centroid[1], 2), round(obs.wx, 2), round(obs.wy, 2)] for obs in env.obstacles])
-    env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)
+    #env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)
+    env.multi_render(mode=args.render_mode, output_file="./figures/iqn_random_init")

@@ -136,8 +136,9 @@ if __name__ == "__main__":
     parser.add_argument('--buffer_size', default=60000, type=int, help='Buffer size of the replay memory')
     parser.add_argument('--frames', default=100000, type=int, help='Number of training frames')
     parser.add_argument('--n_episodes', default=2000, type=int, help='Number of episodes of training')
-    parser.add_argument('--obstacle_num', default=5, type=int, help='Number of obstacles set in the env')
+    parser.add_argument('--obstacle_num', default=6, type=int, help='Number of obstacles set in the env')
     parser.add_argument('--random_obstacle', default=1, type=int, help='Enable random obstacle generation or fixed obstacle position')
+    parser.add_argument('--variance_samples_n', default=8, type=int, help='Truncated Variance calculation hyperparameter')
     args = parser.parse_args()
 
     if not os.path.exists(args.save_dir):
@@ -180,7 +181,8 @@ if __name__ == "__main__":
                         device=device,
                         seed=args.seed,
                         distortion=args.distortion,
-                        con_val_at_risk=bool(args.sample_cvar))
+                        con_val_at_risk=bool(args.sample_cvar),
+                        variance_samples_n=args.variance_samples_n)
     
     max_velocity = args.max_velocity
     agent.action_space = agent.build_action_space(max_velocity)

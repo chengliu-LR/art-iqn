@@ -3,3 +3,4 @@ experiments*/
 **/*.ipynb
 .DS_Store
 cache/*
+figures/

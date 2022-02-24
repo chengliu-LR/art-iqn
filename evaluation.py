@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument('--dir', default=None, help='Change the model loading directory here')
     parser.add_argument('--env', default='CrazyflieEnv-v0', help='Training environment')
     parser.add_argument('--num_directions', default=4, type=int, help='Discrete directions')
-    parser.add_argument('--num_speeds', default=1, type=int, help='Discrete velocities')
+    parser.add_argument('--num_speeds', default=3, type=int, help='Discrete velocities')
     parser.add_argument('--max_velocity', default=1.0, type=float, help='Maximum velocity')
     parser.add_argument('--distortion', default='neutral', help='Which risk distortion measure to use')
     parser.add_argument('--sample_cvar', default=1, type=float, help="Enable cvar value sampling from the uniform distribution")
@@ -84,9 +84,9 @@ if __name__ == "__main__":
     agent.action_space = agent.build_action_space(args.max_velocity)
 
     # evaluation collision rate, success rate, task finishing time, danger zone
-    cvar_values = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
-    densities = [1, 3, 5, 7]
-    num_eval_episodes = 100
+    cvar_values = [0.2, 0.4, 0.75, 1.0]
+    densities = [2, 4, 8]
+    num_eval_episodes = 150
     seeds = [i for i in range(num_eval_episodes)]
 
     logger_eval = open("./experimentsCrazy/{}/eval.csv".format(args.dir), 'w+')
@@ -105,7 +105,7 @@ if __name__ == "__main__":
             for epoch in range(num_eval_episodes):
                 np.random.seed(seeds[epoch])
                 state, obs_num = env.reset()
-                if epoch <= 2:
+                if epoch <= 1:
                     print("check if seed works:", cvar, obs_num, env.robot.get_goal_position())
                 done = False
                 score = 0

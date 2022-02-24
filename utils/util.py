@@ -40,28 +40,20 @@ def eval_runs(agent, eps, frame):
     #writer.add_scalar("Reward", np.mean(reward_batch), frame)
 
 
-def to_gym_interface(state):
-    assert isinstance(state, FullState)
-    #new_state = np.array((state.px, state.py, state.vx, state.vy, state.radius, state.gx, state.gy), dtype=np.float32)
-    new_state = np.array((state.px, state.py), dtype=np.float32)
-    return new_state
-
-
-def to_gym_interface_ranger(state):
-    assert isinstance(state, FullState)
-    state = np.hstack((state.px, state.py, state.ranger_reflections))
+def to_gym_interface_pos(state):
+    state = np.hstack((state.position, state.goal_distance, state.ranger_reflections))
     return state
 
 
 def to_gym_interface_pomdp(state):
-    assert isinstance(state, ObservableState)
     state = np.hstack((state.goal_distance, state.ranger_reflections))
     return state
 
 
-def to_gym_interface_pos(state):
+def to_gym_interface_vel(state):
     state = np.hstack((state.position, state.velocity, state.goal_distance, state.ranger_reflections))
     return state
+
 
 def computeExperimentID(save_dir):
     list_of_ids = [int(id) for id in os.listdir(save_dir)]
