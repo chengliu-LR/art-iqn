@@ -10,7 +10,7 @@ from crazyflie_env.envs.utils.action import ActionXY
 class DQNAgent():
     """Interacts with and learns from the environment."""
     def __init__(self, state_size, num_directions, num_speeds, layer_size, n_step, BATCH_SIZE, BUFFER_SIZE,
-                LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk, eval=False):
+                LR, TAU, GAMMA, UPDATE_EVERY, device, seed, distortion, con_val_at_risk, variance_samples_n, eval=False):
         """Initialize an Agent object.
         Params
         ======
@@ -42,12 +42,14 @@ class DQNAgent():
         self.BATCH_SIZE = BATCH_SIZE
         self.n_step = n_step
 
+        self.variance_samples_n = variance_samples_n
+
         self.action_step = 4
         self.last_action = None
 
         # IQN-Network
-        self.qnetwork_local = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
-        self.qnetwork_target = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk).to(device)
+        self.qnetwork_local = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk, variance_samples_n).to(device)
+        self.qnetwork_target = IQN(self.state_size, self.action_size, layer_size, n_step, seed, distortion, con_val_at_risk, variance_samples_n).to(device)
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         #print(self.qnetwork_local)
@@ -119,6 +121,15 @@ class DQNAgent():
         else:
             self.action_step += 1
             return self.last_action, self.action_space[self.last_action]
+
+
+    def get_tcv(self, state, action_id):
+        state = np.array(state)
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            tcv = self.qnetwork_local.get_tcv(state, action_id)
+        
+        return tcv
 
 
     def learn(self, experiences):

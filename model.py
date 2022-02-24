@@ -4,7 +4,7 @@ import numpy as np
 from utils.util import weight_init
 class IQN(nn.Module):
     '''implicit quantile network model'''
-    def __init__(self, state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk, layer_type="ff"):
+    def __init__(self, state_size, action_size, layer_size, n_step, seed, distortion, con_val_at_risk, variance_samples_n=8, layer_type="ff"):
         super(IQN, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.seed = torch.manual_seed(seed)
@@ -12,6 +12,8 @@ class IQN(nn.Module):
         self.action_size = action_size
         self.K = 32 # for action selection
         self.N = 8 # num tau
+        # samples for variance calculation, variance_samples_n = N / 2, N in paper (DRL for efficient exploration, ICML 2019)
+        self.variance_samples_n = variance_samples_n
         self.n_cos = 64 # embedding dimension
         self.distortion = distortion
         self.con_val_at_risk = con_val_at_risk
@@ -47,7 +49,20 @@ class IQN(nn.Module):
         return cos, taus
     
 
-    def forward(self, inputs, num_tau=8, distortion='neutral', cvar=1.0):
+    def calc_cos_tcv(self, batch_size, n_tau=8):
+        """
+        Calculating the cosinus values depending on the number of tau samples for TCV calculation
+        Fixed taus range
+        n_tau: controls how many samples to measure the tcv
+        """
+        taus = torch.linspace(1/(2 * n_tau), 0.5, n_tau).to(self.device).unsqueeze(-1) # (batch_size, n_tau, 1) for broadcast
+
+        cos = torch.cos(taus * self.pis)
+        assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
+        return cos, taus
+
+
+    def forward(self, inputs, num_tau=8, distortion='neutral', cvar=1.0, tcv=False):
         """
         Quantile calculation depending on the number of tau
         
@@ -59,7 +74,10 @@ class IQN(nn.Module):
         batch_size = inputs.shape[0]
         
         x = torch.relu(self.head(inputs))
-        cos, taus = self.calc_cos(batch_size, num_tau, distortion, cvar) # cos shape (batch, num_tau, layer_size)
+        if not tcv:
+            cos, taus = self.calc_cos(batch_size, num_tau, distortion, cvar) # cos shape (batch, num_tau, layer_size)
+        else:
+            cos, taus = self.calc_cos_tcv(batch_size, num_tau) # fixed tau range, no sampling for tau
         cos = cos.view(batch_size * num_tau, self.n_cos)
         cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, self.layer_size)
         
@@ -76,3 +94,14 @@ class IQN(nn.Module):
         quantiles, _ = self.forward(inputs=inputs, num_tau=self.K, distortion=self.distortion, cvar=cvar)
         qvals = quantiles.mean(dim=1)
         return qvals
+    
+
+    def get_tcv(self, inputs, action_id):
+        #quantiles [ shape of (batch_size, num_tau, action_size)]
+        truncated_quantiles, taus = self.forward(inputs=inputs, num_tau=self.variance_samples_n, tcv=True)
+        quantiles_action = truncated_quantiles.transpose(1, 2)[0, action_id]
+        #print(quantiles_action.shape, taus) # should be torch.Size([n_tau])
+        median = quantiles_action[-1]
+        tcv = torch.mean((quantiles_action - median)**2) / 4 # tcv = 1/(2*N)*sum_1^{N/2}(theta_{N/2} - theta_i)^2
+    
+        return tcv
