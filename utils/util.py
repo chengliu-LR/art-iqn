@@ -5,6 +5,7 @@ import random
 import numpy as np
 from collections import deque, namedtuple
 from crazyflie_env.envs.utils.state import FullState, ObservableState
+from typing import List, Dict
 
 def weight_init(layers):
     for layer in layers:
@@ -16,7 +17,7 @@ def calculate_huber_loss(td_errors, k=1.0):
     Calculate huber loss element-wisely depending on kappa k
     """
     loss = torch.where(td_errors.abs() <= k, 0.5 * td_errors.pow(2), k * (td_errors.abs() - 0.5 * k))
-    #assert loss.shape == (td_errors.shape[0], 8, 8), "huber loss has wrong shape"
+
     return loss
     
 
@@ -138,3 +139,69 @@ class ReplayBuffer():
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
+
+
+class ExpoWeightedAveForcast():
+    def __init__(self, 
+                 lr: float = 0.1,
+                 window: int = 10, 
+                 decay: float = 0.8,
+                 init: float = 0.0,
+                 use_std: bool = True) -> None:
+        """Initialize.
+        """
+        
+        self.w = {0:-3, 1:3.0}
+        self.error_buffer = []
+        self.window = window
+        self.lr = lr
+        self.decay = decay
+        self.use_std = use_std
+        
+        self.choices = [self.arm]
+        self.data = []
+
+    def get_probs(self) -> List:
+        """Get arm probabilities.
+        Returns:
+            List: probabilities for each arm. 
+        """
+        p = [np.exp(x) for x in self.w.values()]
+        p[1] += (np.sum(p) / 9)
+        p /= np.sum(p) # normalize to make it a distribution
+
+        return p
+
+        
+    def update_dists(self, feedback: float, norm: float = 1.0) -> None:
+        """Update distribution over arms. 
+        Args:
+            feedback (float): Feedback signal. 
+            norm (float, optional): Normalization factor. Defaults to 1.0.
+        """
+
+        # Since this is non-stationary, subtract mean of previous self.window errors. 
+        self.error_buffer.append(feedback)
+        self.error_buffer = self.error_buffer[-self.window:]
+        
+        # normalize
+        feedback -= np.mean(self.error_buffer)
+        if self.use_std and len(self.error_buffer) > 1: norm = np.std(self.error_buffer); 
+        feedback /= (norm + 1e-4)
+
+        feedback = np.mean(self.error_buffer)
+
+        # update arm weights
+        #self.w[self.arm] *= self.decay
+        if feedback > 0:
+
+            #self.w[1] += self.lr * (feedback / max(self.get_probs()[1], 0.01))
+            self.w[1] += self.lr * feedback #lr=2
+            self.w[0] -= self.lr * feedback
+        elif feedback < 0:
+            self.w[1] += self.lr * feedback
+            self.w[0] -= self.lr * feedback
+            #self.w[1] += self.lr * (feedback)
+        #self.w[self.arm] += self.lr * feedback * elf.get_probs()[self.arm]
+        
+        self.data.append(feedback)

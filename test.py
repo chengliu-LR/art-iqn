@@ -52,6 +52,9 @@ if __name__ == "__main__":
     env.enable_random_obstacle(args.random_obstacle)
     env.set_obstacle_num(args.obstacle_num)
     state, _ = env.reset()
+    
+    logger = {}
+    logger['tcv'] = []
 
     # if you want to set robot initial position by hand:
     env.robot.set_state(args.init_x, args.init_y, 0, 0, 0.0, 3.0, 0, 0, env.obstacle_segments) # generalize to a slightly modified goal position
@@ -89,13 +92,17 @@ if __name__ == "__main__":
     while not done:
         action_id, action = agent.act(to_gym_interface_pos(state), eps, args.cvar)
         next_state, reward, done, info = env.step(action)
+        tcv = agent.get_tcv(to_gym_interface_pos(state), action_id)
         #agent.update(state, action, reward, next_state, done)
         state = next_state
         score += reward
-        #print("x {}, y {}, reward {}, info {} vx {}, vy {}".format(round(state.position[0], 5), round(state.position[1], 5), round(reward, 2), info, round(action.vx, 2), round(action.vy, 2)))
-        print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(state.velocity[0], 2), round(state.velocity[1], 2), state.ranger_reflections[1]))
+        logger['tcv'].append(tcv.item()) # for plot
+        #print("dist {}, reward {}, {} vx {}, vy {} ranger {}".format(round(state.goal_distance, 6), round(reward, 2), info, round(state.velocity[0], 2), round(state.velocity[1], 2), state.ranger_reflections[1]))
+    logger['global_time'] = env.global_time
+    logger['state'] = env.states # for plot
     print("Episodic return:", score, "Task time", env.global_time)
 
-    print([[round(obs.centroid[0], 2), round(obs.centroid[1], 2), round(obs.wx, 2), round(obs.wy, 2)] for obs in env.obstacles])
+    #print([[round(obs.centroid[0], 2), round(obs.centroid[1], 2), round(obs.wx, 2), round(obs.wy, 2)] for obs in env.obstacles])
     #env.render(mode=args.render_mode, output_file="./figures/iqn_random_init", density=args.render_density)
+    pickle.dump(logger, open("experimentsCrazy/{}/loggers/logger_{}.pkl".format(args.dir, args.cvar), 'wb'))
     env.multi_render(mode=args.render_mode, output_file="./figures/iqn_random_init")

@@ -1,6 +1,5 @@
 __pycache__/
-experiments*/
+archived/
 **/*.ipynb
 .DS_Store
 cache/*
-figures/
